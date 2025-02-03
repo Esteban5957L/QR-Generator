@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador de QR</title>
+    <title>Generador de QR con Redirección</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body {
@@ -39,21 +39,63 @@
     </style>
 </head>
 <body>
-    <h2>Generador de Código QR</h2>
+    <h2>Generador de Código QR con Redirección</h2>
     <input type="text" id="link" placeholder="Ingrese un enlace">
-    <button onclick="generarQR()">Generar QR</button>
+    <button onclick="guardarYGenerarQR()">Generar QR</button>
+    <button onclick="cambiarURL()">Cambiar Redirección</button>
     <div id="qrcode"></div>
 
     <script>
-        function generarQR() {
+        async function guardarYGenerarQR() {
             var link = document.getElementById("link").value;
             if (link) {
-                document.getElementById("qrcode").innerHTML = "";
-                new QRCode(document.getElementById("qrcode"), link);
+                await fetch("/api/guardar", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ url: link })
+                });
+                generarQR();
             } else {
                 alert("Por favor, ingrese un enlace válido.");
             }
         }
+
+        function generarQR() {
+            var url = window.location.origin + "/api/obtener";
+            document.getElementById("qrcode").innerHTML = "";
+            new QRCode(document.getElementById("qrcode"), url);
+        }
+
+        async function cambiarURL() {
+            var nuevaURL = prompt("Ingrese la nueva URL de redirección:");
+            if (nuevaURL) {
+                await fetch("/api/guardar", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ url: nuevaURL })
+                });
+                alert("URL actualizada con éxito");
+            }
+        }
+
+        async function verificarRedireccion() {
+            const params = new URLSearchParams(window.location.search)
+            if (params.has("redirect")) {
+                try {
+                    let response = await fetch("/api/obtener");
+                    if (response.ok) {
+                        let storedURL = await response.text();
+                        window.location.href = storedURL.trim();
+                    } else {
+                        alert("No se pudo obtener la URL de redirección.");
+                    }
+                } catch (error) {
+                    alert("Error al obtener la URL de redirección.");
+                }
+            }
+        }
+
+        verificarRedireccion();
     </script>
 </body>
 </html>
